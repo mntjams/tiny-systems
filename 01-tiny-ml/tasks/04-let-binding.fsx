@@ -43,16 +43,39 @@ let rec evaluate (ctx:VariableContext) e =
       | _ -> failwith ("unbound variable: " + v)
 
   // NOTE: You have the following from before
-  | Unary(op, e) -> failwith "implemented in step 2"
-  | If(econd, etrue, efalse) -> failwith "implemented in step 2"
-  | Lambda(v, e) -> failwith "implemented in step 3"
-  | Application(e1, e2) -> failwith "implemented in step 3"
+  | Unary(op, e) ->
+      let v = evaluate ctx e
+      match v with
+      | ValNum n ->
+        match op with
+        | "-" -> ValNum -n
+        | _ -> failwith "unsupported unary operator"
+      | _ -> failwith "unsupported argument of an unary operation"
+  | If(econd, etrue, efalse) ->
+      let v1 = evaluate ctx econd
+      match v1 with
+      | ValNum num ->
+        match num with
+        | 1 -> evaluate ctx etrue
+        | _ -> evaluate ctx efalse
+      | _ -> failwith "condition has to evaluate to a number"
+  
+  | Lambda(v, e) -> ValClosure (v, e, ctx)
+
+  | Application(e1, e2) ->
+      let v1 = evaluate ctx e1
+      let v2 = evaluate ctx e2
+      match v1 with
+      | ValClosure (cs, ce, cctx) ->
+        let cctx = cctx.Add(cs, v2)
+        evaluate cctx ce
+      | _ -> failwith "can only apply functions"
 
   | Let(v, e1, e2) ->
+    evaluate ctx (Application(Lambda(v, e2), e1))
     // TODO: There are two ways to do this! A nice tricky is to 
     // treat 'let' as a syntactic sugar and transform it to the
     // 'desugared' expression and evaluating that :-)
-    failwith "not implemented"
 
 // ----------------------------------------------------------------------------
 // Test cases
