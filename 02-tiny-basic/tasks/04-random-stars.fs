@@ -94,7 +94,6 @@ let rec evalExpression state expr =
           | BoolValue b1, BoolValue b2 -> BoolValue(b1 || b2)
           | _ -> failwith "cannot apply || to non-bool value"
         | "RND" -> 
-          let v1 = evalExpression state el[0]
           match v1 with
           | NumberValue n -> NumberValue(state.Random.Next n)
           | _ -> failwith "RAND takes an argument of type NumberValue"
