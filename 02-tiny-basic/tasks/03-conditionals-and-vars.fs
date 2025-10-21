@@ -83,15 +83,6 @@ let rec runCommand state (line, cmd) =
       runNextLine state line
   | Goto(line) ->
       getLine state line |> runCommand state 
-  
-  // TODO: Implement assignment and conditional. Assignment should run the
-  // next line after setting the variable value. 'If' is a bit trickier:
-  // * 'L1: IF TRUE THEN GOTO <L2>' will continue evaluating on line 'L2'
-  // * 'L1: IF FALSE THEN GOTO <L2>' will continue on line after 'L1'
-  // * 'L1: IF TRUE THEN PRINT "HI"' will print HI and continue on line after 'L1'
-  //
-  // HINT: If <e> evaluates to TRUE, you can call 'runCommand' recursively with
-  // the command in the 'THEN' branch and the current line as the line number.
   | Assign (s, e) ->
     let new_ctx = state.Context.Add(s, evalExpression state e)
     let new_state = {state with Context = new_ctx}
