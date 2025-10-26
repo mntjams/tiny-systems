@@ -14,27 +14,22 @@ type Number =
 
 
 let rec occursCheck (v:string) (n:Number) = 
-  // TODO: Check if variable 'v' appears anywhere inside 'n'
-  false
+  match n with
+  | Zero -> false
+  | Succ n -> occursCheck v n
+  | Variable var -> var = v
 
-let rec substite (v:string) (subst:Number) (n:Number) =
-  // TODO: Replace all occurrences of variable 'v' in the
-  // number 'n' with the replacement number 'subst'
-  n
+let rec substitute (v:string) (subst:Number) (n:Number) =
+  match n with
+  | Zero -> n
+  | Succ x -> Succ(substitute v subst x)
+  | Variable var -> if v = var then subst else Variable(var)
 
 let substituteConstraints (v:string) (subst:Number) (constraints:list<Number * Number>) = 
-  // TODO: Substitute 'v' for 'subst' (use 'substitute') in 
-  // all numbers in all the constraints in 'constraints'
-  // HINT: You can use 'List.map' to implement this.
-  constraints
+  List.map (fun (n1, n2) -> substitute v subst n1, substitute v subst n2) constraints
 
 let substituteAll (subst:list<string * Number>) (n:Number) =
-  // TODO: Perform all substitutions specified  in 'subst' on the number 'n'
-  // HINT: You can use 'List.fold' to implement this. Fold has a type:
-  //   ('State -> 'T -> 'State) -> 'State -> List<'T> -> 'State
-  // In this case, 'State will be the Number on which we want to apply 
-  // the substitutions and List<'T> will be a list of substitutions.
-  n
+  List.fold (fun oldn (v, num) -> substitute v num oldn) n subst
 
 let rec solve constraints = 
   match constraints with 
@@ -74,6 +69,5 @@ solve
   [ Variable "x", Succ(Succ(Variable "z"))
     Succ(Variable "z"), Succ(Zero) ]
 
-// Not done: Need occurs check
 solve
   [ Variable "x", Succ(Variable "x") ]
