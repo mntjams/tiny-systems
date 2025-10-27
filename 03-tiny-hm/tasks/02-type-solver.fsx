@@ -11,26 +11,39 @@ type Type =
   | TyNumber 
   | TyList of Type
 
-let occursCheck vcheck ty =
-  // TODO: Return true of type 'ty' contains variable 'vcheck'
-  failwith "not implemented"
+let rec occursCheck vcheck ty =
+  match ty with
+  | TyVariable v -> vcheck = v
+  | TyBool 
+  | TyNumber -> false
+  | TyList t -> occursCheck vcheck t
  
 let rec substType (subst:Map<string, Type>) ty = 
-  // TODO: Apply all the specified substitutions to the type 'ty'
-  // (that is, replace all occurrences of 'v' in 'ty' with 'subst.[v]')
-  failwith "not implemented"
+  match ty with
+  | TyVariable ty ->
+      if subst.ContainsKey ty then subst.[ty] else TyVariable(ty)
+  | TyBool
+  | TyNumber -> ty
+  | TyList ty -> TyList(substType subst ty)
 
 let substConstrs (subst:Map<string, Type>) (cs:list<Type * Type>) = 
-  // TODO: Apply substitution 'subst' to all types in constraints 'cs'
-  failwith "not implemented"
+  List.map (fun (t1, t2) -> substType subst t1, substType subst t2) cs
  
 
 let rec solve cs =
   match cs with 
   | [] -> []
   | (TyNumber, TyNumber)::cs -> solve cs
-  // TODO: Fill in the remaining cases! You can closely follow the
-  // example from task 1 - the logic here is exactly the same.
+  | (TyBool, TyBool)::cs -> solve cs
+  | (TyList t1, TyList t2)::cs -> solve ((t1, t2)::cs)
+  | (t, TyVariable v)::cs
+  | (TyVariable v, t)::cs ->
+      if occursCheck v t then failwith "cannot be solved (occurs check)"
+      let cs = substConstrs (Map.ofList [(v, t)]) cs
+      let subst = solve cs
+      let t = substType (Map.ofList subst) t
+      (v, t)::subst
+  | _ -> failwith "cannot be solved"
 
 
 // ----------------------------------------------------------------------------
