@@ -22,19 +22,46 @@ let rule p b = { Head = p; Body = b }
 // ----------------------------------------------------------------------------
 
 let rec substitute (subst:Map<string, Term>) term = 
-  failwith "implemented in step 2"
+  match term with
+  | Atom a -> Atom a
+  | Variable v -> if subst.ContainsKey v then subst.[v] else Variable(v)
+  | Predicate (p, ts) ->
+    let newTs = List.map (fun t -> substitute subst t) ts
+    Predicate (p, newTs)
 
 let substituteSubst (newSubst:Map<string, Term>) (subst:list<string * Term>) = 
-  failwith "implemented in step 2"
+  List.map (fun (n, t) -> (n, substitute newSubst t)) subst
 
 let substituteTerms subst (terms:list<Term>) = 
-  failwith "implemented in step 2"
+  List.map (fun t -> substitute subst t) terms
 
 let rec unifyLists l1 l2 = 
-  failwith "implemented in steps 1 and 2"
+  match l1, l2 with 
+  | [], [] -> 
+      Some []
+  | h1::t1, h2::t2 -> 
+      let headUni = unify h1 h2
+      match headUni with
+      | Some headUni ->
+        let t1 = substituteTerms (Map.ofList headUni) t1
+        let t2 = substituteTerms (Map.ofList headUni) t2
+        let tailUni = unifyLists t1 t2
+        match tailUni with
+        | Some tailUni ->
+          let headUni = substituteSubst (Map.ofList tailUni) headUni
+          Some (headUni @ tailUni)
+        | _ -> None
+      | _ -> None
+  | _ -> None
 
 and unify t1 t2 = 
-  failwith "implemented in step 1"
+  match t1, t2 with 
+  | Atom a1, Atom a2 -> if a1 = a2 then Some [] else None
+  | Predicate (p1, t1), Predicate (p2, t2) ->
+    if p1 = p2 then unifyLists t1 t2 else None
+  | Variable v, t
+  | t, Variable v -> Some [(v, t)]
+  | _ -> None
 
 // ----------------------------------------------------------------------------
 // Searching the program (database) and variable renaming
@@ -45,35 +72,46 @@ let nextNumber =
   fun () -> n <- n + 1; n
 
 let rec freeVariables term = 
-  failwith "implemented in step 3"
+  match term with
+  | Atom _ -> []
+  | Variable v -> [v]
+  | Predicate (_, ts) ->
+    List.collect (fun t -> freeVariables t) ts
 
 let withFreshVariables (clause:Clause) : Clause =
-  failwith "implemented in step 3"
+  let headFreeVars = freeVariables clause.Head
+  let bodyFreeVars = List.collect (fun t -> freeVariables t) clause.Body
+  let distinctVars = List.distinct headFreeVars @ bodyFreeVars
+
+  let n = nextNumber().ToString()
+  let varsWithN = List.map (fun v -> v, Variable(v + n)) distinctVars |> Map.ofList
+
+  let newHead = substitute varsWithN clause.Head
+  let newBody = substituteTerms varsWithN clause.Body
+
+  { Head = newHead; Body = newBody }
 
 let query (program:list<Clause>) (query:Term) =
-  failwith "implemented in step 3"
+  program
+  |> List.map (fun c -> withFreshVariables c)
+  |> List.choose ( fun c ->
+    let headUni = unify c.Head query
+    match headUni with
+    | Some subst -> Some (c, subst)
+    | None -> None
+  )
 
 let rec solve program subst goals = 
   match goals with 
   | g::goals -> 
-      // TODO: We need to solve the goal (term) 'g'. To do so, find all 
-      // matching clauses in the 'program' using 'query' and iterate over
-      // the returned list using 'for clause, newSubst in matches do'.
-      // For each possible solution, we need to add the 'clause.Body' to 
-      // the list of 'goals' and apply the substitution 'newSubst' to the
-      // new concatentated list of 'goals'. Then we need to apply the 
-      // substitution 'newSubst' to the substitution 'subst' we have so far,
-      // append the two and call 'solve' recursively with this new substitution
-      // to solve the new goals.
-      let matches = failwith "TODO"
+      let matches = query program g
       for clause, newSubst in matches do
-        let newGoals = failwith "TODO"
-        solve program (failwith "TODO") (failwith "TODO")
-
+        let newGoals =  goals @ clause.Body |> substituteTerms (Map.ofList newSubst)
+        let subst = substituteSubst (Map.ofList newSubst) subst
+        let subst = subst @ newSubst
+        solve program subst newGoals
   | [] -> 
-    // TODO: We solved all goals, which means 'subst' is a possible solution!
-    // Print 'subst' (either using printfn "%A" or in some nicer way).
-    failwith "not implemented" 
+    printfn "%A" subst
 
 // ----------------------------------------------------------------------------
 // Querying the British royal family 
